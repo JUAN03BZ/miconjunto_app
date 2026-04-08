@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "306145407301",
+    "project_id": "conjunto-app-1688d",
+    "storage_bucket": "conjunto-app-1688d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:306145407301:android:0351eb1c29268704a88e2c",
+        "android_client_info": {
+          "package_name": "com.example.conjunto_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDko9gq4M-MfKOASt6xDiexrce-S05VqFQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
