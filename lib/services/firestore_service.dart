@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class FirestoreService {
   final _db = FirebaseFirestore.instance;
-  
+
   String get uid => FirebaseAuth.instance.currentUser?.uid ?? '';
   String get email => FirebaseAuth.instance.currentUser?.email ?? '';
 
@@ -26,6 +26,18 @@ class FirestoreService {
         .snapshots();
   }
 
+  // Todas las visitas (para portería y admin)
+  Stream<QuerySnapshot> todasLasVisitas() {
+    return _db
+        .collection('visitas')
+        .orderBy('fecha', descending: true)
+        .snapshots();
+  }
+
+  Future<void> actualizarEstadoVisita(String docId, String estado) async {
+    await _db.collection('visitas').doc(docId).update({'estado': estado});
+  }
+
   // ── PAGOS ────────────────────────────────────────────────
   Stream<QuerySnapshot> misPagos() {
     return _db
@@ -43,9 +55,11 @@ class FirestoreService {
   }
 
   Future<void> inicializarPagosResidente() async {
-    // Crea pagos de ejemplo si el residente no tiene ninguno
-    final existing = await _db.collection('pagos')
-        .where('uid', isEqualTo: uid).limit(1).get();
+    final existing = await _db
+        .collection('pagos')
+        .where('uid', isEqualTo: uid)
+        .limit(1)
+        .get();
     if (existing.docs.isEmpty) {
       final pagosBase = [
         {'concepto': 'Administración Marzo 2026', 'monto': 280000,
@@ -80,6 +94,22 @@ class FirestoreService {
         .snapshots();
   }
 
+  // Todas las PQRS (para admin)
+  Stream<QuerySnapshot> todasLasPqrs() {
+    return _db
+        .collection('pqrs')
+        .orderBy('fecha', descending: true)
+        .snapshots();
+  }
+
+  Future<void> responderPqrs(String docId, String respuesta) async {
+    await _db.collection('pqrs').doc(docId).update({
+      'respuesta': respuesta,
+      'estado': 'Resuelta',
+      'fechaRespuesta': FieldValue.serverTimestamp(),
+    });
+  }
+
   // ── RESERVAS ─────────────────────────────────────────────
   Future<void> crearReserva(Map<String, dynamic> data) async {
     await _db.collection('reservas').add({
@@ -99,8 +129,29 @@ class FirestoreService {
         .snapshots();
   }
 
+  // Reservas por espacio y fecha (para verificar disponibilidad)
+  Stream<QuerySnapshot> reservasPorEspacio(String espacio, String fecha) {
+    return _db
+        .collection('reservas')
+        .where('espacio', isEqualTo: espacio)
+        .where('fecha', isEqualTo: fecha)
+        .where('estado', isEqualTo: 'Confirmada')
+        .snapshots();
+  }
+
+  // Todas las reservas (para admin)
+  Stream<QuerySnapshot> todasLasReservas() {
+    return _db
+        .collection('reservas')
+        .orderBy('creadoEn', descending: true)
+        .snapshots();
+  }
+
   Future<void> cancelarReserva(String docId) async {
-    await _db.collection('reservas').doc(docId).update({'estado': 'Cancelada'});
+    await _db
+        .collection('reservas')
+        .doc(docId)
+        .update({'estado': 'Cancelada'});
   }
 
   // ── CASILLERO ────────────────────────────────────────────
@@ -110,6 +161,22 @@ class FirestoreService {
         .where('email', isEqualTo: email)
         .orderBy('fechaLlegada', descending: true)
         .snapshots();
+  }
+
+  // Todos los paquetes (para portería y admin)
+  Stream<QuerySnapshot> todosCasilleros() {
+    return _db
+        .collection('casillero')
+        .orderBy('fechaLlegada', descending: true)
+        .snapshots();
+  }
+
+  Future<void> registrarPaquete(Map<String, dynamic> data) async {
+    await _db.collection('casillero').add({
+      ...data,
+      'estado': 'Sin recoger',
+      'fechaLlegada': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> marcarRecogido(String docId) async {
