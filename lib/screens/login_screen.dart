@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import 'admin/admin_home.dart';
 import 'porteria/porteria_home.dart';
@@ -21,10 +22,19 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final user = await _auth.login(_emailCtrl.text.trim(), _passCtrl.text.trim());
+      final user = await _auth.login(
+        _emailCtrl.text.trim(),
+        _passCtrl.text.trim(),
+      );
       if (user != null) {
-        final rol = _auth.getRol(user.email ?? '');
+        // Crea el documento en Firestore si es la primera vez que entra
+        await _auth.crearUsuarioSiNoExiste(user);
+
+        // Obtiene el rol desde Firestore usando el UID
+        final rol = await _auth.getRol(user.uid);
+
         if (!mounted) return;
+
         Widget destino;
         if (rol == 'admin') {
           destino = const AdminHome();
@@ -33,13 +43,24 @@ class _LoginScreenState extends State<LoginScreen> {
         } else {
           destino = ResidenteHome(email: user.email ?? '');
         }
+
         Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (_) => destino));
+          context,
+          MaterialPageRoute(builder: (_) => destino),
+        );
       }
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        _error = (e.code == 'user-not-found' ||
+                e.code == 'wrong-password' ||
+                e.code == 'invalid-credential')
+            ? 'Correo o contraseña incorrectos'
+            : 'Error: ${e.message}';
+      });
     } catch (e) {
-      setState(() { _error = 'Correo o contraseña incorrectos'; });
+      setState(() { _error = 'Error inesperado. Intenta de nuevo.'; });
     }
-    setState(() { _loading = false; });
+    if (mounted) setState(() { _loading = false; });
   }
 
   @override
@@ -56,20 +77,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Icon(Icons.apartment, size: 80, color: Colors.white),
                 const SizedBox(height: 16),
                 const Text('Mi Conjunto',
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold,
-                      color: Colors.white)),
+                    style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white)),
                 const SizedBox(height: 8),
                 const Text('Gestión residencial',
-                  style: TextStyle(color: Colors.white70, fontSize: 16)),
+                    style: TextStyle(color: Colors.white70, fontSize: 16)),
                 const SizedBox(height: 48),
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    boxShadow: [BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 20, offset: const Offset(0, 10))],
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10))
+                    ],
                   ),
                   child: Column(
                     children: [
@@ -96,8 +122,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       if (_error != null) ...[
                         const SizedBox(height: 12),
-                        Text(_error!,
-                          style: const TextStyle(color: Colors.red)),
+                        Row(
+                          children: [
+                            const Icon(Icons.error_outline,
+                                color: Colors.red, size: 18),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(_error!,
+                                  style: const TextStyle(color: Colors.red)),
+                            ),
+                          ],
+                        ),
                       ],
                       const SizedBox(height: 24),
                       SizedBox(
@@ -112,10 +147,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                 borderRadius: BorderRadius.circular(12)),
                           ),
                           child: _loading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text('Ingresar',
-                                style: TextStyle(fontSize: 16,
-                                    fontWeight: FontWeight.bold)),
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                      color: Colors.white, strokeWidth: 2.5))
+                              : const Text('Ingresar',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ],
