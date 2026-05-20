@@ -40,7 +40,8 @@ class _PorteriaHomeState extends State<PorteriaHome>
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text('Portería', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Portería',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF607D8B),
         foregroundColor: Colors.white,
         actions: [
@@ -98,24 +99,29 @@ class _VistaVisitas extends StatelessWidget {
             final ts = (d.data() as Map)['fecha'] as Timestamp?;
             if (ts == null) return false;
             final f = ts.toDate();
-            return f.day == hoy.day && f.month == hoy.month && f.year == hoy.year;
+            return f.day == hoy.day &&
+                f.month == hoy.month &&
+                f.year == hoy.year;
           }).toList();
-          final pendientes =
-              visitasHoy.where((d) => (d.data() as Map)['estado'] == 'Registrada').length;
+          final pendientes = visitasHoy
+              .where((d) =>
+                  (d.data() as Map)['estado'] == 'Registrada')
+              .length;
 
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
               Row(children: [
-                Expanded(child: _StatCard('Hoy', '${visitasHoy.length}',
-                    Icons.today, Colors.blue)),
+                Expanded(child: _StatCard('Hoy',
+                    '${visitasHoy.length}', Icons.today, Colors.blue)),
                 const SizedBox(width: 12),
-                Expanded(child: _StatCard('Pendientes', '$pendientes',
-                    Icons.hourglass_empty, Colors.orange)),
+                Expanded(child: _StatCard('Pendientes',
+                    '$pendientes', Icons.hourglass_empty, Colors.orange)),
               ]),
               const SizedBox(height: 20),
               const Text('Visitas registradas',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               if (docs.isEmpty)
                 const Center(
@@ -128,41 +134,61 @@ class _VistaVisitas extends StatelessWidget {
                 final d = doc.data() as Map<String, dynamic>;
                 final estado = d['estado'] ?? 'Registrada';
                 final autorizado = estado == 'Autorizada';
+
+                // Torre y apartamento
+                final torre = d['torre'] ?? '';
+                final apto = d['apartamento'] ?? d['apto'] ?? '-';
+                final destino = torre.isNotEmpty
+                    ? 'Torre $torre · Apto $apto'
+                    : 'Apto $apto';
+
                 return Card(
                   margin: const EdgeInsets.only(bottom: 8),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: autorizado ? Colors.green : Colors.orange,
-                      child: const Icon(Icons.person, color: Colors.white),
+                      backgroundColor:
+                          autorizado ? Colors.green : Colors.orange,
+                      child:
+                          const Icon(Icons.person, color: Colors.white),
                     ),
                     title: Text(d['nombre'] ?? '',
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600)),
                     subtitle: Text(
-                        'Apto: ${d['apartamento'] ?? d['apto'] ?? '-'} · ${formatFecha(d['fecha'] as Timestamp?)}'),
+                      '$destino\n'
+                      'Doc: ${d['documento'] ?? '-'} · ${d['fechaVisita'] ?? formatFecha(d['fecha'] as Timestamp?)}',
+                    ),
+                    isThreeLine: true,
                     trailing: autorizado
                         ? const Chip(
                             label: Text('Autorizada',
-                                style: TextStyle(color: Colors.white, fontSize: 11)),
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11)),
                             backgroundColor: Colors.green)
                         : ElevatedButton(
                             onPressed: () async {
-                              await fs.actualizarEstadoVisita(doc.id, 'Autorizada');
+                              await fs.actualizarEstadoVisita(
+                                  doc.id, 'Autorizada');
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(const SnackBar(
                                         backgroundColor: Colors.green,
-                                        content: Text('✅ Visita autorizada')));
+                                        content: Text(
+                                            '✅ Visita autorizada')));
                               }
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF607D8B),
+                              backgroundColor:
+                                  const Color(0xFF607D8B),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 6),
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
+                                  borderRadius:
+                                      BorderRadius.circular(8)),
                             ),
                             child: const Text('Autorizar',
                                 style: TextStyle(fontSize: 12)),
@@ -186,8 +212,9 @@ class _VistaVisitas extends StatelessWidget {
 
   void _mostrarRegistro(BuildContext context) {
     final nombreCtrl = TextEditingController();
-    final aptoCtrl = TextEditingController();
     final docCtrl = TextEditingController();
+    final torreCtrl = TextEditingController();
+    final aptoCtrl = TextEditingController();
     bool guardando = false;
 
     showModalBottomSheet(
@@ -198,17 +225,51 @@ class _VistaVisitas extends StatelessWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModal) => Padding(
           padding: EdgeInsets.only(
-              left: 24, right: 24, top: 24,
+              left: 24,
+              right: 24,
+              top: 24,
               bottom: MediaQuery.of(context).viewInsets.bottom + 24),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const Text('Registrar Visita',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             _campo(nombreCtrl, 'Nombre del visitante', Icons.person),
             const SizedBox(height: 12),
-            _campo(aptoCtrl, 'Apartamento', Icons.apartment),
-            const SizedBox(height: 12),
             _campo(docCtrl, 'Documento (opcional)', Icons.badge),
+            const SizedBox(height: 12),
+            // Torre y Apto en la misma fila
+            Row(children: [
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  controller: torreCtrl,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: InputDecoration(
+                    labelText: 'Torre',
+                    hintText: 'Ej: A',
+                    prefixIcon: const Icon(Icons.location_city),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 3,
+                child: TextField(
+                  controller: aptoCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Apartamento',
+                    hintText: 'Ej: 301',
+                    prefixIcon: const Icon(Icons.door_front_door),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ]),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -223,12 +284,14 @@ class _VistaVisitas extends StatelessWidget {
                 onPressed: guardando
                     ? null
                     : () async {
-                        if (nombreCtrl.text.isEmpty || aptoCtrl.text.isEmpty) return;
+                        if (nombreCtrl.text.isEmpty ||
+                            aptoCtrl.text.isEmpty) return;
                         setModal(() => guardando = true);
                         await fs.registrarVisita({
                           'nombre': nombreCtrl.text.trim(),
-                          'apartamento': aptoCtrl.text.trim(),
                           'documento': docCtrl.text.trim(),
+                          'torre': torreCtrl.text.trim(),
+                          'apartamento': aptoCtrl.text.trim(),
                           'registradoPor': 'porteria',
                         });
                         if (ctx.mounted) Navigator.pop(ctx);
@@ -236,16 +299,19 @@ class _VistaVisitas extends StatelessWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                   backgroundColor: Colors.green,
-                                  content: Text('✅ Visita registrada')));
+                                  content:
+                                      Text('✅ Visita registrada')));
                         }
                       },
                 child: guardando
                     ? const SizedBox(
-                        height: 20, width: 20,
+                        height: 20,
+                        width: 20,
                         child: CircularProgressIndicator(
                             color: Colors.white, strokeWidth: 2))
                     : const Text('Registrar',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                        style:
+                            TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ]),
@@ -254,13 +320,15 @@ class _VistaVisitas extends StatelessWidget {
     );
   }
 
-  Widget _campo(TextEditingController c, String label, IconData icon) =>
+  Widget _campo(
+          TextEditingController c, String label, IconData icon) =>
       TextField(
         controller: c,
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12)),
         ),
       );
 }
@@ -269,7 +337,8 @@ class _VistaVisitas extends StatelessWidget {
 class _VistaCasillero extends StatelessWidget {
   final FirestoreService fs;
   final String Function(Timestamp?) formatFecha;
-  const _VistaCasillero({required this.fs, required this.formatFecha});
+  const _VistaCasillero(
+      {required this.fs, required this.formatFecha});
 
   @override
   Widget build(BuildContext context) {
@@ -281,22 +350,25 @@ class _VistaCasillero extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           final docs = snap.data?.docs ?? [];
-          final sinRecoger =
-              docs.where((d) => (d.data() as Map)['estado'] == 'Sin recoger').length;
+          final sinRecoger = docs
+              .where((d) =>
+                  (d.data() as Map)['estado'] == 'Sin recoger')
+              .length;
 
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
               Row(children: [
-                Expanded(child: _StatCard('Sin recoger', '$sinRecoger',
-                    Icons.inbox, Colors.orange)),
+                Expanded(child: _StatCard('Sin recoger',
+                    '$sinRecoger', Icons.inbox, Colors.orange)),
                 const SizedBox(width: 12),
                 Expanded(child: _StatCard('Total', '${docs.length}',
                     Icons.inventory_2, Colors.blueGrey)),
               ]),
               const SizedBox(height: 20),
               const Text('Paquetes registrados',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               if (docs.isEmpty)
                 const Center(
@@ -314,23 +386,31 @@ class _VistaCasillero extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12)),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor:
-                          sinRec ? const Color(0xFFFF9800) : Colors.grey,
-                      child: const Icon(Icons.inventory_2, color: Colors.white),
+                      backgroundColor: sinRec
+                          ? const Color(0xFFFF9800)
+                          : Colors.grey,
+                      child: const Icon(Icons.inventory_2,
+                          color: Colors.white),
                     ),
                     title: Text(d['remitente'] ?? 'Paquete',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold)),
                     subtitle: Text(
-                        '${d['email'] ?? ''}\n${d['descripcion'] ?? ''} · ${formatFecha(d['fechaLlegada'] as Timestamp?)}'),
+                        '${d['email'] ?? ''}\n'
+                        '${d['descripcion'] ?? ''} · ${formatFecha(d['fechaLlegada'] as Timestamp?)}'),
                     isThreeLine: true,
                     trailing: sinRec
                         ? const Chip(
                             label: Text('Sin recoger',
-                                style: TextStyle(color: Colors.white, fontSize: 10)),
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10)),
                             backgroundColor: Color(0xFFFF9800))
                         : const Chip(
                             label: Text('Recogido',
-                                style: TextStyle(color: Colors.white, fontSize: 10)),
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10)),
                             backgroundColor: Colors.grey),
                   ),
                 );
@@ -363,15 +443,19 @@ class _VistaCasillero extends StatelessWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModal) => Padding(
           padding: EdgeInsets.only(
-              left: 24, right: 24, top: 24,
+              left: 24,
+              right: 24,
+              top: 24,
               bottom: MediaQuery.of(context).viewInsets.bottom + 24),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const Text('Registrar Paquete',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             _campo(emailCtrl, 'Correo del residente', Icons.email),
             const SizedBox(height: 12),
-            _campo(remitenteCtrl, 'Remitente (ej: Amazon)', Icons.store),
+            _campo(remitenteCtrl, 'Remitente (ej: Amazon)',
+                Icons.store),
             const SizedBox(height: 12),
             _campo(descCtrl, 'Descripción', Icons.inventory_2),
             const SizedBox(height: 16),
@@ -388,10 +472,13 @@ class _VistaCasillero extends StatelessWidget {
                 onPressed: guardando
                     ? null
                     : () async {
-                        if (emailCtrl.text.isEmpty || remitenteCtrl.text.isEmpty) return;
+                        if (emailCtrl.text.isEmpty ||
+                            remitenteCtrl.text.isEmpty) return;
                         setModal(() => guardando = true);
                         await fs.registrarPaquete({
-                          'email': emailCtrl.text.trim().toLowerCase(),
+                          'email': emailCtrl.text
+                              .trim()
+                              .toLowerCase(),
                           'remitente': remitenteCtrl.text.trim(),
                           'descripcion': descCtrl.text.trim(),
                         });
@@ -400,16 +487,19 @@ class _VistaCasillero extends StatelessWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                   backgroundColor: Colors.green,
-                                  content: Text('✅ Paquete registrado')));
+                                  content:
+                                      Text('✅ Paquete registrado')));
                         }
                       },
                 child: guardando
                     ? const SizedBox(
-                        height: 20, width: 20,
+                        height: 20,
+                        width: 20,
                         child: CircularProgressIndicator(
                             color: Colors.white, strokeWidth: 2))
                     : const Text('Registrar',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                        style:
+                            TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ]),
@@ -418,13 +508,15 @@ class _VistaCasillero extends StatelessWidget {
     );
   }
 
-  Widget _campo(TextEditingController c, String label, IconData icon) =>
+  Widget _campo(
+          TextEditingController c, String label, IconData icon) =>
       TextField(
         controller: c,
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12)),
         ),
       );
 }
@@ -442,9 +534,12 @@ class _StatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 8, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 4))
+        ],
       ),
       child: Row(children: [
         Icon(icono, color: color, size: 32),
@@ -452,9 +547,12 @@ class _StatCard extends StatelessWidget {
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(valor,
               style: TextStyle(
-                  fontSize: 24, fontWeight: FontWeight.bold, color: color)),
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: color)),
           Text(titulo,
-              style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              style:
+                  const TextStyle(fontSize: 12, color: Colors.grey)),
         ]),
       ]),
     );

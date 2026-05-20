@@ -12,6 +12,7 @@ class _VisitasScreenState extends State<VisitasScreen> {
   final _fs = FirestoreService();
   final _nombreCtrl = TextEditingController();
   final _docCtrl = TextEditingController();
+  final _torreCtrl = TextEditingController();
   final _aptoCtrl = TextEditingController();
   final _fechaCtrl = TextEditingController();
   bool _guardando = false;
@@ -20,6 +21,7 @@ class _VisitasScreenState extends State<VisitasScreen> {
   void dispose() {
     _nombreCtrl.dispose();
     _docCtrl.dispose();
+    _torreCtrl.dispose();
     _aptoCtrl.dispose();
     _fechaCtrl.dispose();
     super.dispose();
@@ -37,19 +39,20 @@ class _VisitasScreenState extends State<VisitasScreen> {
     await _fs.registrarVisita({
       'nombre': _nombreCtrl.text.trim(),
       'documento': _docCtrl.text.trim(),
+      'torre': _torreCtrl.text.trim(),
       'apartamento': _aptoCtrl.text.trim(),
       'fechaVisita': _fechaCtrl.text.trim(),
     });
     _nombreCtrl.clear();
     _docCtrl.clear();
+    _torreCtrl.clear();
     _aptoCtrl.clear();
     _fechaCtrl.clear();
     setState(() => _guardando = false);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           backgroundColor: Colors.green,
-          content:
-              Text('✅ Visita registrada. Portería fue notificada.')));
+          content: Text('✅ Visita registrada. Portería fue notificada.')));
     }
   }
 
@@ -78,37 +81,81 @@ class _VisitasScreenState extends State<VisitasScreen> {
                 const Text(
                     'Registra con anticipación para evitar esperas en portería.',
                     textAlign: TextAlign.center,
-                    style:
-                        TextStyle(color: Colors.grey, fontSize: 13)),
+                    style: TextStyle(color: Colors.grey, fontSize: 13)),
+                const SizedBox(height: 20),
+
+                // Nombre
+                _campo(_nombreCtrl, 'Nombre del visitante', Icons.person),
+                const SizedBox(height: 12),
+
+                // Documento
+                _campo(_docCtrl, 'Documento de identidad', Icons.badge),
                 const SizedBox(height: 16),
-                _campo(_nombreCtrl, 'Nombre del visitante',
-                    Icons.person),
+
+                // Torre y Apartamento en la misma fila
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Destino',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey)),
+                ),
+                const SizedBox(height: 8),
+                Row(children: [
+                  // Torre
+                  Expanded(
+                    flex: 2,
+                    child: TextField(
+                      controller: _torreCtrl,
+                      keyboardType: TextInputType.text,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: InputDecoration(
+                        labelText: 'Torre',
+                        hintText: 'Ej: 5',
+                        prefixIcon: const Icon(Icons.location_city),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Apartamento
+                  Expanded(
+                    flex: 3,
+                    child: TextField(
+                      controller: _aptoCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Apartamento',
+                        hintText: 'Ej: 301',
+                        prefixIcon: const Icon(Icons.door_front_door),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ]),
                 const SizedBox(height: 12),
-                _campo(_docCtrl, 'Documento de identidad',
-                    Icons.badge),
-                const SizedBox(height: 12),
-                _campo(_aptoCtrl, 'Apartamento', Icons.apartment),
-                const SizedBox(height: 12),
-                // Date picker
+
+                // Fecha
                 TextField(
                   controller: _fechaCtrl,
                   readOnly: true,
                   decoration: InputDecoration(
                     labelText: 'Fecha de visita',
-                    prefixIcon:
-                        const Icon(Icons.calendar_today),
+                    prefixIcon: const Icon(Icons.calendar_today),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12)),
-                    suffixIcon:
-                        const Icon(Icons.arrow_drop_down),
+                    suffixIcon: const Icon(Icons.arrow_drop_down),
                   ),
                   onTap: () async {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: DateTime.now(),
                       firstDate: DateTime.now(),
-                      lastDate: DateTime.now()
-                          .add(const Duration(days: 60)),
+                      lastDate:
+                          DateTime.now().add(const Duration(days: 60)),
                     );
                     if (picked != null) {
                       _fechaCtrl.text =
@@ -116,7 +163,9 @@ class _VisitasScreenState extends State<VisitasScreen> {
                     }
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
+
+                // Botón registrar
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -124,8 +173,7 @@ class _VisitasScreenState extends State<VisitasScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2196F3),
                       foregroundColor: Colors.white,
-                      padding:
-                          const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12))),
                     child: _guardando
@@ -146,17 +194,15 @@ class _VisitasScreenState extends State<VisitasScreen> {
 
           const SizedBox(height: 24),
           const Text('Mis visitas registradas',
-              style: TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.bold)),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
 
-          // ── Lista con estado de portería ───────────────────
+          // ── Lista con estado ───────────────────────────────
           StreamBuilder<QuerySnapshot>(
             stream: _fs.misVisitas(),
             builder: (_, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
-                return const Center(
-                    child: CircularProgressIndicator());
+                return const Center(child: CircularProgressIndicator());
               }
               if (!snap.hasData || snap.data!.docs.isEmpty) {
                 return const Padding(
@@ -170,6 +216,11 @@ class _VisitasScreenState extends State<VisitasScreen> {
                   final d = doc.data() as Map<String, dynamic>;
                   final estado = d['estado'] ?? 'Registrada';
                   final autorizada = estado == 'Autorizada';
+                  final torre = d['torre'] ?? '';
+                  final apto = d['apartamento'] ?? '-';
+                  final destino = torre.isNotEmpty
+                      ? 'Torre $torre · Apto $apto'
+                      : 'Apto $apto';
 
                   final chipColor =
                       autorizada ? Colors.green : Colors.orange;
@@ -192,15 +243,14 @@ class _VisitasScreenState extends State<VisitasScreen> {
                           style: const TextStyle(
                               fontWeight: FontWeight.w600)),
                       subtitle: Text(
-                        'Apto: ${d['apartamento'] ?? '-'}\n'
+                        '$destino\n'
                         'Doc: ${d['documento'] ?? '-'} · ${d['fechaVisita'] ?? ''}',
                       ),
                       isThreeLine: true,
                       trailing: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(chipIcon,
-                              color: chipColor, size: 22),
+                          Icon(chipIcon, color: chipColor, size: 22),
                           const SizedBox(height: 2),
                           Text(chipLabel,
                               style: TextStyle(
@@ -227,8 +277,8 @@ class _VisitasScreenState extends State<VisitasScreen> {
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12)),
+        border:
+            OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
